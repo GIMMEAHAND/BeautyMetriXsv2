@@ -609,24 +609,48 @@
         // Initialize
         let platformsData = JSON.parse(localStorage.getItem('beautyMetrixPlatforms')) || {};
         let contentData = JSON.parse(localStorage.getItem('beautyMetrixContent')) || [];
-
+let currentTab = 'platforms';
+let tabStartTime = Date.now();
         // Tab switching
-        function switchTab(tabName) {
-            if (typeof gtag === 'function') {
-                gtag('event', 'tab_switch', { 'tab_name': tabName });
-            }
+       function switchTab(tabName) {
+    // Track time spent on previous tab
+    if (typeof gtag === 'function' && currentTab) {
+        const timeSpent = Math.round((Date.now() - tabStartTime) / 1000);
+        gtag('event', 'tab_time_spent', {
+            'tab_name': currentTab,
+            'time_seconds': timeSpent
+        });
+    }
 
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
-            event.target.classList.add('active');
-            document.getElementById(tabName).classList.add('active');
-            
-            if (tabName === 'platforms') loadPlatforms();
-            if (tabName === 'content') loadContent();
-            if (tabName === 'performance') loadPerformance();
-        }
+    // Track tab switch
+    if (typeof gtag === 'function') {
+        gtag('event', 'tab_switch', { 'tab_name': tabName });
+    }
 
+    // Update current tab and reset timer
+    currentTab = tabName;
+    tabStartTime = Date.now();
+
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    
+    event.target.classList.add('active');
+    document.getElementById(tabName).classList.add('active');
+    
+    if (tabName === 'platforms') loadPlatforms();
+    if (tabName === 'content') loadContent();
+    if (tabName === 'performance') loadPerformance();
+}
+// Track time when user leaves page
+window.addEventListener('beforeunload', function() {
+    if (typeof gtag === 'function' && currentTab) {
+        const timeSpent = Math.round((Date.now() - tabStartTime) / 1000);
+        gtag('event', 'tab_time_spent', {
+            'tab_name': currentTab,
+            'time_seconds': timeSpent
+        });
+    }
+});
         // Save Platforms
         function savePlatforms() {
             platformsData = {
@@ -1031,7 +1055,12 @@
         }
 
         // Initialize
-        document.addEventListener('DOMContentLoaded', loadPlatforms);
+      document.addEventListener('DOMContentLoaded', function() {
+    loadPlatforms();
+    if (typeof gtag === 'function') {
+        gtag('event', 'page_load', { 'initial_tab': 'platforms' });
+    }
+});
     </script>
 
     <!-- PWA Service Worker -->
